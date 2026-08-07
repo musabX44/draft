@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  image         String?
+  createdAt     DateTime @default(now())
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]
+  comments      Comment[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  user               User    @relation(fields: [userId], references: [id])
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  boards    Board[]
+  memberships Membership[]
+}
+
+model Membership {
+  id        String @id @default(cuid())
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+  team      Team   @relation(fields: [teamId], references: [id])
+  teamId    String
+  role      String // admin, member, viewer
+  createdAt DateTime @default(now())
+}
+
+model Board {
+  id        String   @id @default(cuid())
+  title     String
+  description String?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  teamId    String?
+  columns   Column[] @relation(onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Column {
+  id       String @id @default(cuid())
+  title    String
+  order    Int    @default(0)
+  board    Board  @relation(fields: [boardId], references: [id])
+  boardId  String
+  cards    Card[] @relation(onDelete: Cascade)
+}
+
+model Card {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  order     Int      @default(0)
+  column    Column   @relation(fields: [columnId], references: [id])
+  columnId  String
+  assignees User[]   @relation("CardAssignees", references: [id])
+  comments  Comment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comment {
+  id        String @id @default(cuid())
+  content   String
+  author    User   @relation(fields: [authorId], references: [id])
+  authorId  String
+  card      Card   @relation(fields: [cardId], references: [id])
+  cardId    String
+  createdAt DateTime @default(now())
+}
+
+model Activity {
+  id        String @id @default(cuid())
+  actorId   String
+  actor     User   @relation(fields: [actorId], references: [id])
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+}
